@@ -79,3 +79,65 @@
 1. 함수들이 공유하는 공통 데이터 레코드를 캡슐화한다.
 2. 공통 레코드를 사용하는 함수 각각을 새 클래스로 옮긴다.
 3. 데이터를 조작하는 로직들은 함수로 추출해서 새 클래스로 옮긴다.
+
+
+- 측정값을 다음과 같이 기록
+
+  ```javascript
+  reading = {customer: "ivan", quantity: 10, month: 5, yaer: 2017},
+  ```
+  
+- 레코드를 클래스로 변환하기 위해 레코드를 캡슐화
+  - getter, setter를 통해서는 값에 접근할 수 있다.
+
+  ```javascript
+  class Reading {
+    constructor(data) {
+      this._customer = data.customer;
+      this._quantity = data.quantity;
+      this._month = data.month;
+      this._year = data.year;
+    }
+    
+    get customer() {return this._cutomer;}
+    get quantity() {return this._quantity;}
+    get month() {return this._month;}
+    get year() {return this._year;}
+  }
+  ```
+  
+
+- 데이터를 조작하는 로직들은 함수로 추출해서 클래스에 반영
+
+  ```javascript
+  class Reading {
+    constructor(data) {
+      this._customer = data.customer;
+      this._quantity = data.quantity;
+      this._month = data.month;
+      this._year = data.year;
+    }
+    
+    get customer() {return this._cutomer;}
+    get quantity() {return this._quantity;}
+    get month() {return this._month;}
+    get year() {return this._year;}
+    
+    get calculateBaseCharge() {
+      return baseRate(this.month, this.yaer) * this.quantity;
+    }
+  }
+  ```
+  
+  
+  ## Ch 6.10 여러 함수를 변환 함수로 묶기
+  
+  6.9의 경우에는 여러 함수를 클래스로 묶었다면 6.10은 여러 함수를 변환 함수로 묶는 케이스이다.
+
+  책에서는 원본 데이터가 코드 안에서 갱신될 때는 클래스로 뮦는 편이 훨씬 낫다고 표현하고있따.
+  
+  변환함수로 묶으면 가공한 데이터를 새로운 레코드에 저장하므로, 원본 데이터가 수정되면 일관성이 깨질 수 있다.
+  
+  개인적으로 클래스로 묶는 방식이 편하다고 생각하기 때문에 실제 업무에서 변환 함수로 묶는 경우는 거의 없을것 같다.
+  
+  
