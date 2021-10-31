@@ -106,7 +106,6 @@
   }
   ```
   
-
 - 데이터를 조작하는 로직들은 함수로 추출해서 클래스에 반영
 
   ```javascript
@@ -130,14 +129,140 @@
   ```
   
   
+  
+  
+  
+  
+  
   ## Ch 6.10 여러 함수를 변환 함수로 묶기
   
   6.9의 경우에는 여러 함수를 클래스로 묶었다면 6.10은 여러 함수를 변환 함수로 묶는 케이스이다.
-
+  
   책에서는 원본 데이터가 코드 안에서 갱신될 때는 클래스로 뮦는 편이 훨씬 낫다고 표현하고있따.
   
   변환함수로 묶으면 가공한 데이터를 새로운 레코드에 저장하므로, 원본 데이터가 수정되면 일관성이 깨질 수 있다.
   
   개인적으로 클래스로 묶는 방식이 편하다고 생각하기 때문에 실제 업무에서 변환 함수로 묶는 경우는 거의 없을것 같다.
+  
+  
+  
+  ## Ch 6.11 단계 쪼개기
+  
+  - 서로 다른 두 대상을 한꺼번에 다루는 코드 -> 별개 모듈로 나누자.
+    - 코드를 수정해야할 때 두 대상을 동시에 생각할 필요 없이 하나에만 집중하기 위해
+    - 모듈이 잘 분리되어있다면 다른 모듈의 상세 내용은 전혀 기억하지 못해도 원하는 대로 수정 가능
+  
+  1. 두 번째 단계에 해당하는 코드를 독립 함수로 추출
+  2. 테스트
+  3. 중간 데이터 구조를 만들어서 앞에서 추출한 함수의 인수로 추가한다.
+  4. 테스트
+  5. 추출한 두 번째 단계 함수의 매개변수를 하나씩 검토한다. 그중 첫 번째 단계에서 사용되는 것은 중간 데이터 구조로 옮긴다. 
+  6. 첫 번째 단계 코드를 함수로 추출하면서 중간 데이터 구조를 반환하도록 만든다.
+  
+  
+  
+  ```javascript
+  function priceOrder(product, quantity, shippinhMethod) {
+    const basePrice = product.basePrice * quantity;
+    const discount = Math.max(quantity - product.discountThreshold, 0) * product.basePrice * product.discountRate;
+    const shippingCase = (basePrice > shippingMethod.discountThreshold) ? shippingMethod.discountedFee: shippingMethod.feePerCase;
+    const shippingCost = quantity * shippingPerCase;
+    const price = basePrice - discount + shippingCost;
+    return price;
+  }
+  ```
+  
+  
+  
+  - 배송비 계산 부분을 함수로 추출한다.
+  
+  ```javascript
+  function priceOrder(product, quantity, shippinhMethod) {
+    const basePrice = product.basePrice * quantity;
+    const discount = Math.max(quantity - product.discountThreshold, 0) * product.basePrice * product.discountRate;
+    const price = applyShipping(basePrice, shippingMethod, quantity, discount);
+    return price;
+  }
+  
+  function applyShipping(basePrice, shippingMethod, quantity, discount) {
+     const shippingCase = (basePrice > shippingMethod.discountThreshold) ? shippingMethod.discountedFee: shippingMethod.feePerCase;
+    const shippingCost = quantity * shippingPerCase;
+    const price = basePrice - discount + shippingCost;
+    return price;
+  }
+  ```
+  
+  
+  
+  - 첫 번째 단계와 두 번째 단계가 주고받을 중간 데이터 구조를 만든다.
+  
+  ```javascript
+  function priceOrder(product, quantity, shippinhMethod) {
+    const basePrice = product.basePrice * quantity;
+    const discount = Math.max(quantity - product.discountThreshold, 0) * product.basePrice * product.discountRate;
+    const priceData = {}; // 중간 데이터 구조
+    const price = applyShipping(priceData, basePrice, shippingMethod, quantity, discount);
+    return price;
+  }
+  
+  function applyShipping(priceData, basePrice, shippingMethod, quantity, discount) {
+     const shippingCase = (basePrice > shippingMethod.discountThreshold) ? shippingMethod.discountedFee: shippingMethod.feePerCase;
+    const shippingCost = quantity * shippingPerCase;
+    const price = basePrice - discount + shippingCost;
+    return price;
+  }
+  ```
+  
+  - 중간 데이터 구조로 매개변수 옮기고 제거
+  
+  ```javascript
+  function priceOrder(product, quantity, shippinhMethod) {
+    const basePrice = product.basePrice * quantity;
+    const discount = Math.max(quantity - product.discountThreshold, 0) * product.basePrice * product.discountRate;
+    const priceData = {
+      basePrice: basePrice,
+      quantity: quantity,
+      discount: discount,
+    }; // 중간 데이터 구조
+    const price = applyShipping(priceData, shippingMethod);
+    return price;
+  }
+  
+  // shippingMethod를 데이터구조로 옮기지 않는 이유: 1단계에서 사용하지 않고 바로 2단계로 전달
+  function applyShipping(priceData, shippingMethod) {
+     const shippingCase = (priceData.basePrice > shippingMethod.discountThreshold) ? shippingMethod.discountedFee: shippingMethod.feePerCase;
+    const shippingCost = priceData.quantity * shippingPerCase;
+    const price = priceData.basePrice - priceData.discount + shippingCost;
+    return price;
+  }
+  ```
+  
+  - 첫 단계 코드를 함수로 추출
+  
+  ```javascript
+  function priceOrder(product, quantity, shippinhMethod) {
+    const priceData = calculatePricingData(product, quantity);
+    const price = applyShipping(priceData, shippingMethod);
+    return price;
+  }
+  
+  function calculatePricingData(product, quantity) {
+    const basePrice = product.basePrice * quantity;
+    const discount = Math.max(quantity - product.discountThreshold, 0) * product.basePrice * product.discountRate;
+    return {
+      basePrice: basePrice,
+      quantity: quantity,
+      discount: discount,
+    }; // 중간 데이터 구조
+    
+  }
+  
+  function applyShipping(priceData, shippingMethod) {
+     const shippingCase = (priceData.basePrice > shippingMethod.discountThreshold) ? shippingMethod.discountedFee: shippingMethod.feePerCase;
+    const shippingCost = priceData.quantity * shippingPerCase;
+    const price = priceData.basePrice - priceData.discount + shippingCost;
+    return price;
+  }
+  ```
   
   
