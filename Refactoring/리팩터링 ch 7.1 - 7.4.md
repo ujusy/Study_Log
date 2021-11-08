@@ -91,7 +91,6 @@
   }
   ```
   
-  
 - 변경후
 
   ```javascript
@@ -100,7 +99,7 @@
       return this._courses.slice();
     }
 	addCourse(aCourse) { ... }
-
+  
 	removeCourse(aCourse) { ... }
   }
   ```
@@ -110,3 +109,107 @@
 3. 정적 검사를 수행한다.
 4. 컬렉션을 참조하는 부분을 모두 찾는다. 컬렉션의 변경자를 호출하는 코드가 모두 앞에서 추가한 추가/제거 함수를 호출하도록 수정한다. 수정할 때마다 테스트를 진행한다.
 5. 컬렉션 게터를 수정해서 원본 내용을 수정할 수 없는 읽기 전용 프락시나 복제본을 반환하게한다.
+
+
+
+## 7.3 기본형을 객체로 바꾸기
+
+단순한 정보를 숫자나 문자열 같은 간단한 데이터 항목으로 표현 -> 개발이 진행디면서 간단했던 이 정보들이 더 이상 간단하지 않게 변화
+
+예시] 전화번호를 문자열로 표현했는데 나중에 포맷팅이나 지역 코드 추출 같은 특별한 동작이 필요
+
+- 단순한 출력 이상 기능이 필요 ?
+  - 데이터르르 표현하는 전용 클래스를 정의
+
+1. 변수 캡슐화
+2. 단순한 값 클래스 생성.  생성자는 기존 값을 인수로 받아서 저장하고, 이 값을 반환하는 게터를 추가.
+3. 정적 검사를 수행
+4. 값 클래스의 인스턴스를 새로 만들어서 필드에 저장하도록 세터 수정. 
+5. 새로 만든 클래스의 게터를 호출한 결과를 반환하도록 게터 수정
+6. 함수 이름을 바꾸면 원본 접근자의 동작을 더 잘 드러낼 수 있는지 검토
+
+
+
+```javascript
+highPriorityCount = orders.filter( o=> "high" === o.priority || "rush" === o.priority).length;
+
+get priorityString {return this._priority.toString();}
+set priority {this._priority = new Priority(aString);}
+
+class Priority {
+  constructor(value) {this._value = value;}
+  toString() {return this._value;}
+}
+```
+
+
+
+```javascript
+get priorityString {return this._priority.toString();}
+set priority {this._priority = new Priority(aString);}
+
+class Priority {
+  constructor(value) {this._value = value;}
+  toString() {return this._value;}
+}
+
+highPriorityCount = orders.filter( o=> "high" === o.priorityString || "rush" === o.priorityString).length;
+```
+
+
+
+`priority` 객체를 제공하는 게터를 `order`클래스에 만들자.
+
+```javascript
+get priority {return this._priority;}
+get priorityString {return this._priority.toString();}
+set priority {this._priority = new Priority(aString);}
+
+class Priority {
+  constructor(value) {
+    if (value instanceof Priority) return value;
+    this._value = value;
+  }
+  toString() {return this._value;}
+}
+
+highPriorityCount = orders.filter( o=> "high" === o.priorityString || "rush" === o.priorityString).length;
+```
+
+
+
+## 7.4 임시 변수를 질의 함수로 바꾸기
+
+```javascript
+const basePrice = this._quantity * this._itemPrice;
+if (basePrice > 1000) 
+  return basePrice * 0.95;
+else
+  return basePrice * 0.98;
+```
+
+임시 변수를 질의 함수로 변경
+
+```javascript
+get basePrice() {this._quantity * this._itemPrice;}
+...
+if (this.basePrice > 1000) 
+  return this.basePrice * 0.95;
+else
+  return this.basePrice * 0.98;
+```
+
+- 해당 리팩토링은 클래스 안에서 적용할 때 효과가 가장 크다. 
+  - 클래스는 추출한 메서드들에 공유 컨텍스트를 제공하기 때문
+- 임시변수를 질의 함수로 변경한다고 항상 좋은 것 아님.
+  - 변수에 값을 한 번 대입한 뒤 더 복잡한 코드 덩어리에서 여러 차례 다시 대입하는 경우는 질의 함수를 추출!
+  - 스냅숏 용도로 쓰이는 변수는 질의 함수로 적용 안됨.
+
+1. 변수가 사용되기 전에 값이 확실히 결정되는지, 변수를 사용할 때마다 계산 로직이 매번 다른 결과를 내지는 않는지 확인
+2. 읽기전용으로 만들 수 잇는 변수를 읽기전용으로 변경
+3. 테스트
+4. 변수 대입문을 함수로 추출
+5. 변수 인라인으로 임시 변수 제거
+
+(함수 만들고 변수 인라인하면된다.)
+
