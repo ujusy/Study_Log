@@ -10,7 +10,7 @@
 
 - 공부 기간 : 2021. 10 ~ 2021. 12
 
-타입스크립트 프로그래밍
+**[타입스크립트 프로그래밍](https://github.com/ujusy/Study_Log/tree/main/Typescript-Programming)**
 
 - 공부 기간 : 2021.12 ~
 
